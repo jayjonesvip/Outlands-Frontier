@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "$0")"
+
+if [ ! -f index.html ]; then
+  echo "ERROR: index.html was not found."
+  echo "Put this package in the root of your ominous-realms repo, next to index.html."
+  exit 1
+fi
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "ERROR: Node.js was not found."
+  echo "Install Node.js or run this on a machine with Node available."
+  exit 1
+fi
+
+echo "Applying Ominous Realms rebrand..."
+node rebrand-ominous-realms.mjs
+echo "Done. Open index.html to test."
