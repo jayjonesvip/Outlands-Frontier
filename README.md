@@ -70,38 +70,52 @@ Seed controls were removed from the visible menu. The game still keeps an intern
 
 ## Code Options
 
-Gameplay environment options live near the top of `script.js` in `GAME_OPTIONS`.
+Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit that file first for future balance, environment, or presentation changes.
 
 ```js
-const GAME_OPTIONS = {
-  timeMode: 'cycle',
-  skyColor: null,
-  dangerousWater: true,
-  fog: true
+window.ZOMVOX_CONFIG = {
+  buildVersion: '2026.07.01.1',
+  initialSeed: 729641,
+
+  environment: {
+    timeMode: 'cycle',
+    skyColor: null,
+    dangerousWater: true,
+    fog: true
+  }
 };
 ```
 
-`timeMode` controls the lighting mode:
+`environment.timeMode` controls the lighting mode:
 
 - `'cycle'`: normal day/night cycle.
 - `'day'`: always daytime.
 - `'night'`: always nighttime.
 
-`skyColor` controls the sky override:
+`environment.skyColor` controls the sky override:
 
 - `null`: use the dynamic sky color from the active lighting mode.
 - `'#102030'`: use a hex color string.
 - `[0.06, 0.13, 0.20]`: use normalized RGB values from `0` to `1`.
 
-`dangerousWater` controls water damage:
+`environment.dangerousWater` controls water/lava behavior:
 
-- `true`: water damages the player over time. This is the default.
-- `false`: water is visual only.
+- `true`: water renders as red lava, damages the player over time, and generates rocky shorelines. This is the default.
+- `false`: water stays blue and is visual only.
 
-`fog` controls distance fog:
+`environment.fog` controls distance fog:
 
 - `true`: fog is enabled. This is the default.
 - `false`: fog is disabled.
+
+Other sections in `config.js` expose safe defaults for:
+
+- `world`: chunk size, fixed map radius, max terrain height, and water level.
+- `player`: collision size, starting health, starting ammo reserve, respawn reserve floor, and low-health heartbeat threshold.
+- `weapon`: magazine size, reload time, and long-range kill distance.
+- `enemies`: base enemy cap and horde escalation values.
+- `pickups`: ammo/health pickup amounts and drop chances.
+- `timers`: death overlay delay, world rebuild meter duration, and heartbeat interval.
 
 ## Repository Layout
 
@@ -109,6 +123,7 @@ const GAME_OPTIONS = {
 .
 |-- README.md
 |-- index.html
+|-- config.js
 |-- styles.css
 |-- script.js
 `-- assets/
@@ -121,6 +136,7 @@ const GAME_OPTIONS = {
 ## File Responsibilities
 
 - `index.html`: document structure, menu, settings, overlays, HUD containers, mobile controls, and script/style references.
+- `config.js`: future-dev friendly tuning values for environment, world, player, weapon, enemies, pickups, timers, seed, and build version.
 - `styles.css`: visual styling, responsive mobile layout, splash screen, health/ammo HUD, death overlay, world rebuild overlay, and touch controls.
 - `script.js`: WebGL setup, procedural terrain, fixed world chunks, movement, combat, enemy behavior, pickups, world rebuilding, HUD updates, audio, and game loop.
 - `assets/`: splash screen, favicon files, and weapon sprite sheet.
