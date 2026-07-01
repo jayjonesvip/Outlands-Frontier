@@ -278,7 +278,7 @@ window.ZOMVOX_CONFIG = {
       head: null,
       kill: null,
       pickup: 'pickup.mp3',
-      hurt: null,
+      hurt: 'hurt.mp3',
       wave: null,
       heartbeat: null
     }
