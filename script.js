@@ -221,60 +221,9 @@
       .join('');
   }
 
-  let audioCtx = null;
-  function getAudio() {
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) return null;
-    if (!audioCtx) audioCtx = new AC();
-    if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
-    return audioCtx;
-  }
-  function tone(freq, dur = .08, type = 'square', gain = .05, endFreq = null) {
-    const ctx = getAudio();
-    if (!ctx) return;
-    const osc = ctx.createOscillator();
-    const g = ctx.createGain();
-    const now = ctx.currentTime;
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, now);
-    if (endFreq) osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), now + dur);
-    g.gain.setValueAtTime(gain, now);
-    g.gain.exponentialRampToValueAtTime(0.001, now + dur);
-    osc.connect(g); g.connect(ctx.destination);
-    osc.start(now); osc.stop(now + dur + .02);
-  }
-  function noise(dur = .05, gain = .08, cutoff = 1200) {
-    const ctx = getAudio();
-    if (!ctx) return;
-    const len = Math.max(1, Math.floor(ctx.sampleRate * dur));
-    const buffer = ctx.createBuffer(1, len, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
-    const src = ctx.createBufferSource();
-    const filt = ctx.createBiquadFilter();
-    const g = ctx.createGain();
-    const now = ctx.currentTime;
-    filt.type = 'lowpass'; filt.frequency.setValueAtTime(cutoff, now);
-    g.gain.setValueAtTime(gain, now);
-    g.gain.exponentialRampToValueAtTime(0.001, now + dur);
-    src.buffer = buffer;
-    src.connect(filt); filt.connect(g); g.connect(ctx.destination);
-    src.start(now); src.stop(now + dur + .02);
-  }
   function sound(name) {
     if (!soundEnabled) return;
-    if (name === 'shoot') { noise(.045, .12, 950); tone(105, .05, 'sawtooth', .045, 55); }
-    else if (name === 'empty') { tone(120, .07, 'square', .04, 85); }
-    else if (name === 'reloadStart') { tone(180, .05, 'square', .04, 105); setTimeout(() => tone(260, .04, 'square', .035, 180), 110); }
-    else if (name === 'reloadDone') { tone(360, .06, 'triangle', .045, 520); }
-    else if (name === 'block') { noise(.055, .075, 520); tone(165, .045, 'square', .035, 110); }
-    else if (name === 'hit') { tone(470, .055, 'triangle', .055, 260); }
-    else if (name === 'head') { noise(.025, .06, 1900); tone(980, .045, 'square', .065, 1450); setTimeout(() => tone(520, .055, 'triangle', .045, 780), 45); }
-    else if (name === 'kill') { tone(260, .075, 'square', .055, 390); setTimeout(() => tone(520, .08, 'triangle', .05, 780), 80); }
-    else if (name === 'pickup') { tone(520, .06, 'triangle', .045, 780); }
-    else if (name === 'hurt') { tone(85, .12, 'sawtooth', .07, 45); }
-    else if (name === 'wave') { tone(180, .08, 'sawtooth', .05, 120); setTimeout(() => tone(330, .09, 'triangle', .045, 480), 85); }
-    else if (name === 'heartbeat') { tone(55, .11, 'sine', .045, 45); }
+    window.ZomVoxSound?.play(name);
   }
 
 
@@ -405,6 +354,7 @@
 
   function applySettings() {
     soundEnabled = !!settingSound.checked;
+    window.ZomVoxSound?.setEnabled(soundEnabled);
     document.body.classList.toggle('hide-health', !settingHealth.checked);
     document.body.classList.toggle('hide-ammo', !settingAmmo.checked);
     document.body.classList.toggle('hide-controls', !settingControls.checked);
@@ -541,6 +491,9 @@
       if(t < 15.5) return vec3(1.0, 0.45, 0.18); /* particles */
       if(t < 16.5) return vec3(0.95, 0.96, 0.92); /* health box */
       if(t < 17.5) return vec3(0.92, 0.03, 0.04); /* health cross */
+      if(t < 18.5) return vec3(0.21, 0.72, 0.18); /* bright zombie */
+      if(t < 19.5) return vec3(0.55, 0.54, 0.10); /* yellow zombie */
+      if(t < 20.5) return vec3(1.00, 0.82, 0.10); /* yellow eyes */
       return vec3(1.0, 0.45, 0.18); /* particles */
     }
     void main(){
@@ -556,6 +509,7 @@
       if(vType > 11.5 && vType < 12.5) color += vec3(0.70, 0.02, 0.0);
       if(vType > 14.5 && vType < 15.5) color += vec3(0.50, 0.15, 0.04);
       if(vType > 16.5 && vType < 17.5) color += vec3(0.35, 0.0, 0.0);
+      if(vType > 19.5 && vType < 20.5) color += vec3(0.55, 0.35, 0.0);
       float edge = gridLine(vUv);
       color *= mix(0.58, 1.0, edge);
       float sun = max(dot(n, normalize(uLightDir)), 0.0);
@@ -563,6 +517,7 @@
       float light = mix(0.13, 0.39, uDay) + sun * mix(0.28, 0.70, uDay) + skyBounce;
       if(vType > 8.5 && vType < 9.5) light += 0.65;
       if(vType > 11.5 && vType < 12.5) light += 0.75;
+      if(vType > 19.5 && vType < 20.5) light += 0.75;
       if(vType > 12.5) light += 0.22;
       color *= light;
       if(uFog > 0.5){
@@ -1045,8 +1000,9 @@
     const p = enemySpawnPoint();
     if (!p) return;
     const big = seededHash(p.x * 9.1, p.z * 3.2) > 0.82;
+    const variant = Math.floor(seededHash(p.x * 12.7 - 4, p.z * 8.4 + 6) * 4);
     const dx = player.pos[0] - p.x, dz = player.pos[2] - p.z;
-    enemies.push({ x: p.x, y: p.y, z: p.z, hp: big ? 80 : 48, maxHp: big ? 80 : 48, speed: big ? 2.0 : 2.55, attack: 0, retreat: 0, phase: seededHash(p.x, p.z) * 10, big, face: Math.atan2(dx, -dz) });
+    enemies.push({ x: p.x, y: p.y, z: p.z, hp: big ? 80 : 48, maxHp: big ? 80 : 48, speed: big ? 2.0 : 2.55, attack: 0, retreat: 0, phase: seededHash(p.x, p.z) * 10, big, variant, face: Math.atan2(dx, -dz) });
   }
 
   function lerpAngle(a, b, t) {
@@ -1446,14 +1402,18 @@
       const x = e.x, y = e.y + bob, z = e.z;
       // Rotated block-monster silhouette: it turns as it moves, so the eye face points at you.
       const yaw = e.face ?? Math.atan2(player.pos[0] - e.x, -(player.pos[2] - e.z));
-      pushBoxY(arr, x, y, z, -.18*scale, 0, -.18*scale, .22*scale, .45*scale, .22*scale, yaw, 11);
-      pushBoxY(arr, x, y, z,  .02*scale, 0, -.18*scale, .22*scale, .45*scale, .22*scale, yaw, 11);
-      pushBoxY(arr, x, y, z, -.18*scale, 0,  .02*scale, .22*scale, .45*scale, .22*scale, yaw, 11);
-      pushBoxY(arr, x, y, z,  .02*scale, 0,  .02*scale, .22*scale, .45*scale, .22*scale, yaw, 11);
-      pushBoxY(arr, x, y, z, -.34*scale, .36*scale, -.24*scale, .68*scale, .95*scale, .48*scale, yaw, 10);
-      pushBoxY(arr, x, y, z, -.42*scale, 1.22*scale, -.35*scale, .84*scale, .64*scale, .70*scale, yaw, 10);
-      pushBoxY(arr, x, y, z, -.22*scale, 1.48*scale, -.39*scale, .12*scale, .12*scale, .06*scale, yaw, 12);
-      pushBoxY(arr, x, y, z,  .10*scale, 1.48*scale, -.39*scale, .12*scale, .12*scale, .06*scale, yaw, 12);
+      const variant = e.variant || 0;
+      const bodyType = variant === 1 ? 18 : (variant === 2 ? 19 : 10);
+      const limbType = variant === 2 ? 19 : (variant === 3 ? 18 : 11);
+      const eyeType = variant === 3 ? 20 : 12;
+      pushBoxY(arr, x, y, z, -.18*scale, 0, -.18*scale, .22*scale, .45*scale, .22*scale, yaw, limbType);
+      pushBoxY(arr, x, y, z,  .02*scale, 0, -.18*scale, .22*scale, .45*scale, .22*scale, yaw, limbType);
+      pushBoxY(arr, x, y, z, -.18*scale, 0,  .02*scale, .22*scale, .45*scale, .22*scale, yaw, limbType);
+      pushBoxY(arr, x, y, z,  .02*scale, 0,  .02*scale, .22*scale, .45*scale, .22*scale, yaw, limbType);
+      pushBoxY(arr, x, y, z, -.34*scale, .36*scale, -.24*scale, .68*scale, .95*scale, .48*scale, yaw, bodyType);
+      pushBoxY(arr, x, y, z, -.42*scale, 1.22*scale, -.35*scale, .84*scale, .64*scale, .70*scale, yaw, bodyType);
+      pushBoxY(arr, x, y, z, -.22*scale, 1.48*scale, -.39*scale, .12*scale, .12*scale, .06*scale, yaw, eyeType);
+      pushBoxY(arr, x, y, z,  .10*scale, 1.48*scale, -.39*scale, .12*scale, .12*scale, .06*scale, yaw, eyeType);
     }
     for (const p of pickups) {
       const y = p.y + Math.sin(p.bob) * .16;
@@ -1608,7 +1568,7 @@
 
   function startGame() {
     applySettings();
-    if (soundEnabled) getAudio();
+    if (soundEnabled) window.ZomVoxSound?.prime();
     locked = true;
     menu.style.display = 'none';
     if (touchMode) {
