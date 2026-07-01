@@ -49,11 +49,36 @@
   const settingSound = $('settingSound');
   const settingFullscreen = $('settingFullscreen');
 
+  const CONFIG = window.ZOMVOX_CONFIG || {};
+  function configSection(name) {
+    const section = CONFIG[name];
+    return section && typeof section === 'object' ? section : {};
+  }
+  function configNumber(section, key, fallback) {
+    const value = section[key];
+    return Number.isFinite(value) ? value : fallback;
+  }
+  function configString(section, key, fallback) {
+    const value = section[key];
+    return typeof value === 'string' ? value : fallback;
+  }
+  function configBoolean(section, key, fallback) {
+    const value = section[key];
+    return typeof value === 'boolean' ? value : fallback;
+  }
+  const ENV_CONFIG = configSection('environment');
+  const WORLD_CONFIG = configSection('world');
+  const PLAYER_CONFIG = configSection('player');
+  const WEAPON_CONFIG = configSection('weapon');
+  const ENEMY_CONFIG = configSection('enemies');
+  const PICKUP_CONFIG = configSection('pickups');
+  const TIMER_CONFIG = configSection('timers');
+
   const GAME_OPTIONS = {
-    timeMode: 'cycle', // 'cycle', 'day', or 'night'
-    skyColor: null,   // null for dynamic sky, or '#102030', or [0.06, 0.13, 0.20]
-    dangerousWater: true,
-    fog: true
+    timeMode: configString(ENV_CONFIG, 'timeMode', 'cycle'),
+    skyColor: Object.prototype.hasOwnProperty.call(ENV_CONFIG, 'skyColor') ? ENV_CONFIG.skyColor : null,
+    dangerousWater: configBoolean(ENV_CONFIG, 'dangerousWater', true),
+    fog: configBoolean(ENV_CONFIG, 'fog', true)
   };
 
   const BLOCK = {
@@ -68,18 +93,33 @@
     LAMP: 9
   };
 
-  const CHUNK_SIZE = 16;
-  const WORLD_CHUNK_RADIUS = 3;
+  const CHUNK_SIZE = Math.max(4, Math.floor(configNumber(WORLD_CONFIG, 'chunkSize', 16)));
+  const WORLD_CHUNK_RADIUS = Math.max(1, Math.floor(configNumber(WORLD_CONFIG, 'chunkRadius', 3)));
   const WORLD_MIN = -WORLD_CHUNK_RADIUS * CHUNK_SIZE;
   const WORLD_MAX = (WORLD_CHUNK_RADIUS + 1) * CHUNK_SIZE - 1;
-  const MAX_Y = 46;
-  const WATER_LEVEL = 8;
-  const PLAYER_HEIGHT = 1.76;
-  const PLAYER_RADIUS = 0.31;
-  const MAG_SIZE = 6;
-  const RELOAD_TIME = 1.15;
-  const ENEMY_CAP = 18;
-  const LONG_RANGE_KILL_DIST = 34;
+  const MAX_Y = Math.max(16, Math.floor(configNumber(WORLD_CONFIG, 'maxY', 46)));
+  const WATER_LEVEL = Math.max(1, Math.floor(configNumber(WORLD_CONFIG, 'waterLevel', 8)));
+  const PLAYER_HEIGHT = configNumber(PLAYER_CONFIG, 'height', 1.76);
+  const PLAYER_RADIUS = configNumber(PLAYER_CONFIG, 'radius', 0.31);
+  const STARTING_HEALTH = configNumber(PLAYER_CONFIG, 'startingHealth', 100);
+  const STARTING_RESERVE = Math.max(0, Math.floor(configNumber(PLAYER_CONFIG, 'startingReserve', 36)));
+  const RESPAWN_RESERVE_FLOOR = Math.max(0, Math.floor(configNumber(PLAYER_CONFIG, 'respawnReserveFloor', 24)));
+  const LOW_HEALTH_THRESHOLD = configNumber(PLAYER_CONFIG, 'lowHealthThreshold', 25);
+  const MAG_SIZE = Math.max(1, Math.floor(configNumber(WEAPON_CONFIG, 'magSize', 6)));
+  const RELOAD_TIME = Math.max(0.1, configNumber(WEAPON_CONFIG, 'reloadTime', 1.15));
+  const ENEMY_CAP = Math.max(1, Math.floor(configNumber(ENEMY_CONFIG, 'baseCap', 18)));
+  const HORDE_KILLS_PER_LEVEL = Math.max(1, Math.floor(configNumber(ENEMY_CONFIG, 'hordeKillsPerLevel', 5)));
+  const HORDE_CAP_BONUS = Math.max(0, Math.floor(configNumber(ENEMY_CONFIG, 'hordeCapBonus', 2)));
+  const AMMO_PICKUP_ROUNDS = Math.max(1, Math.floor(configNumber(PICKUP_CONFIG, 'ammoRounds', 6)));
+  const HEALTH_PICKUP_AMOUNT = Math.max(1, configNumber(PICKUP_CONFIG, 'healthAmount', 25));
+  const MAP_AMMO_PICKUP_CHANCE = Math.max(0, Math.min(1, configNumber(PICKUP_CONFIG, 'mapAmmoChance', 0.28)));
+  const MAP_HEALTH_PICKUP_CHANCE = Math.max(0, Math.min(1, configNumber(PICKUP_CONFIG, 'mapHealthChance', 0.10)));
+  const ENEMY_HEALTH_DROP_CHANCE = Math.max(0, Math.min(1, configNumber(PICKUP_CONFIG, 'enemyHealthDropChance', 0.12)));
+  const ENEMY_ANY_DROP_CHANCE = Math.max(ENEMY_HEALTH_DROP_CHANCE, Math.min(1, configNumber(PICKUP_CONFIG, 'enemyAnyDropChance', 0.55)));
+  const LONG_RANGE_KILL_DIST = configNumber(WEAPON_CONFIG, 'longRangeKillDistance', 34);
+  const DEATH_READY_DELAY = Math.max(0.1, configNumber(TIMER_CONFIG, 'deathReadyDelay', 1.85));
+  const WORLD_REBUILD_DURATION = Math.max(0.25, configNumber(TIMER_CONFIG, 'worldRebuildDuration', 2.35));
+  const HEARTBEAT_INTERVAL = Math.max(0.2, configNumber(TIMER_CONFIG, 'heartbeatInterval', 0.95));
 
   for (let i = 0; i < MAG_SIZE; i++) {
     const b = document.createElement('div');
@@ -87,7 +127,7 @@
     bulletRack.appendChild(b);
   }
 
-  let currentSeed = 729641;
+  let currentSeed = Math.floor(configNumber(CONFIG, 'initialSeed', 729641));
   let world = new Map();
   let edits = new Map();
   let loadedChunks = new Set();
@@ -106,9 +146,9 @@
     yaw: Math.PI,
     pitch: 0,
     grounded: false,
-    health: 100,
+    health: STARTING_HEALTH,
     mag: MAG_SIZE,
-    reserve: 36,
+    reserve: STARTING_RESERVE,
     reloading: false,
     reloadTimer: 0,
     invuln: 0,
@@ -130,7 +170,7 @@
   let touchMode = matchMedia('(pointer: coarse)').matches;
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, sprint: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = '2026.07.01.1';
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.01.1');
   let lastTarget = null;
   let lastFrame = performance.now();
   let fpsAvg = 60;
@@ -141,8 +181,8 @@
   let waterDamageTimer = 0;
   let hordeLevel = 0;
   let heartbeatTimer = 0;
-  const deathState = { active: false, timer: 0, duration: 1.85, ready: false };
-  const worldRebuildState = { active: false, timer: 0, startedAt: 0, duration: 2.35, seed: null };
+  const deathState = { active: false, timer: 0, duration: DEATH_READY_DELAY, ready: false };
+  const worldRebuildState = { active: false, timer: 0, startedAt: 0, duration: WORLD_REBUILD_DURATION, seed: null };
 
   function showToast(message) {
     toast.textContent = message;
@@ -276,7 +316,7 @@
   }
 
   function updateLowHealthFeedback(dt) {
-    const low = player.health > 0 && player.health < 25 && !deathState.active && !isMenuOpen();
+    const low = player.health > 0 && player.health < LOW_HEALTH_THRESHOLD && !deathState.active && !isMenuOpen();
     document.body.classList.toggle('low-health', low);
     if (!low) {
       heartbeatTimer = 0;
@@ -285,12 +325,12 @@
     heartbeatTimer -= dt;
     if (heartbeatTimer <= 0) {
       sound('heartbeat');
-      heartbeatTimer = .95;
+      heartbeatTimer = HEARTBEAT_INTERVAL;
     }
   }
 
   function checkHordeLevel() {
-    const next = Math.floor(player.kills / 5);
+    const next = Math.floor(player.kills / HORDE_KILLS_PER_LEVEL);
     if (next <= hordeLevel) return;
     hordeLevel = next;
     scorePop('HORDE PRESSURE +' + hordeLevel, 'wave');
@@ -688,7 +728,7 @@
       y: y + .35,
       z: z + .5,
       kind,
-      amount: kind === 'health' ? 25 : 6,
+      amount: kind === 'health' ? HEALTH_PICKUP_AMOUNT : AMMO_PICKUP_ROUNDS,
       bob: seededHash(x * 5.1, z * 9.3) * 10
     });
   }
@@ -756,13 +796,13 @@
         }
       }
     }
-    if (seededHash(cx * 20.2 + 19, cz * 17.7 - 3) > 0.72) {
+    if (seededHash(cx * 20.2 + 19, cz * 17.7 - 3) > 1 - MAP_AMMO_PICKUP_CHANCE) {
       const lx = 3 + Math.floor(seededHash(cx + 77, cz - 42) * 10);
       const lz = 3 + Math.floor(seededHash(cx - 14, cz + 91) * 10);
       const x = x0 + lx, z = z0 + lz, y = terrainHeight(x, z) + 1;
       if (y > WATER_LEVEL + 1) spawnPickupAt(x, y, z);
     }
-    if (seededHash(cx * 31.4 - 11, cz * 13.9 + 25) > 0.90) {
+    if (seededHash(cx * 31.4 - 11, cz * 13.9 + 25) > 1 - MAP_HEALTH_PICKUP_CHANCE) {
       const lx = 3 + Math.floor(seededHash(cx - 121, cz + 38) * 10);
       const lz = 3 + Math.floor(seededHash(cx + 49, cz - 83) * 10);
       const x = x0 + lx, z = z0 + lz, y = terrainHeight(x, z) + 1;
@@ -1016,7 +1056,7 @@
 
   function updateEnemies(dt) {
     nextSpawnTimer -= dt;
-    const enemyCap = ENEMY_CAP + hordeLevel * 2;
+    const enemyCap = ENEMY_CAP + hordeLevel * HORDE_CAP_BONUS;
     if (nextSpawnTimer <= 0 && enemies.length < enemyCap) {
       spawnEnemy();
       const pressure = Math.min(1.8, hordeLevel * .18);
@@ -1095,9 +1135,9 @@
     deathState.ready = false;
     deathState.timer = 0;
     player.deaths++;
-    player.health = 100;
+    player.health = STARTING_HEALTH;
     player.mag = MAG_SIZE;
-    player.reserve = Math.max(player.reserve, 24);
+    player.reserve = Math.max(player.reserve, RESPAWN_RESERVE_FLOOR);
     player.reloading = false;
     player.reloadTimer = 0;
     resetLifeStats();
@@ -1211,8 +1251,8 @@
         sound('kill');
         checkHordeLevel();
         const dropRoll = Math.random();
-        if (dropRoll < .12) spawnPickupAt(Math.floor(hit.enemy.x), Math.floor(hit.enemy.y), Math.floor(hit.enemy.z), 'health');
-        else if (dropRoll < .55) spawnPickupAt(Math.floor(hit.enemy.x), Math.floor(hit.enemy.y), Math.floor(hit.enemy.z));
+        if (dropRoll < ENEMY_HEALTH_DROP_CHANCE) spawnPickupAt(Math.floor(hit.enemy.x), Math.floor(hit.enemy.y), Math.floor(hit.enemy.z), 'health');
+        else if (dropRoll < ENEMY_ANY_DROP_CHANCE) spawnPickupAt(Math.floor(hit.enemy.x), Math.floor(hit.enemy.y), Math.floor(hit.enemy.z));
         showToast('Enemy down. Kills: ' + player.kills);
       } else {
         pulseHitMarker('hit');
@@ -1249,8 +1289,8 @@
       const dist = Math.hypot(p.x - player.pos[0], p.z - player.pos[2]);
       if (dist < 1.45 && Math.abs(p.y - player.pos[1]) < 2.2) {
         if (p.kind === 'health') {
-          if (player.health >= 100) continue;
-          const healed = Math.min(p.amount, 100 - player.health);
+          if (player.health >= STARTING_HEALTH) continue;
+          const healed = Math.min(p.amount, STARTING_HEALTH - player.health);
           player.health += healed;
           p.collected = true;
           showToast('Health +' + Math.round(healed));
@@ -1528,9 +1568,9 @@
     enemies = [];
     pickups = [];
     particles = [];
-    player.health = 100;
+    player.health = STARTING_HEALTH;
     player.mag = MAG_SIZE;
-    player.reserve = 36;
+    player.reserve = STARTING_RESERVE;
     player.kills = 0;
     player.headshots = 0;
     player.score = 0;
