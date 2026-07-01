@@ -270,7 +270,7 @@ window.ZOMVOX_CONFIG = {
     */
     files: {
       shoot: 'shoot.mp3',
-      empty: null,
+      empty: 'empty.mp3',
       reloadStart: 'reload.mp3',
       reloadDone: null,
       block: null,
