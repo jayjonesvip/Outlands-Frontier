@@ -259,5 +259,28 @@ window.ZOMVOX_CONFIG = {
       Higher = slower heartbeat.
     */
     heartbeatInterval: 0.95
+  },
+
+  audio: {
+    /*
+      Optional sound file overrides.
+
+      Put mp3/wav files in assets/ and set the file name here.
+      Use null to keep the built-in synthesized sound.
+    */
+    files: {
+      shoot: 'shoot.mp3',
+      empty: null,
+      reloadStart: null,
+      reloadDone: null,
+      block: null,
+      hit: null,
+      head: null,
+      kill: null,
+      pickup: null,
+      hurt: null,
+      wave: null,
+      heartbeat: null
+    }
   }
 };

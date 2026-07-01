@@ -12,7 +12,7 @@ Desktop play uses mouse and keyboard. Mobile play is designed for landscape orie
 
 ## Current Features
 
-- Static browser game with split frontend files: `index.html`, `styles.css`, and `script.js`.
+- Static browser game with split frontend files: `index.html`, `styles.css`, `config.js`, `sound.js`, and `script.js`.
 - Branded ZomVox splash screen using `assets/zomvox-splash.png`.
 - Splash screen build label using `BUILD_VERSION` plus the deployed document timestamp.
 - Favicon assets for browser tabs and installed shortcuts.
@@ -116,6 +116,19 @@ Other sections in `config.js` expose safe defaults for:
 - `enemies`: base enemy cap and horde escalation values.
 - `pickups`: ammo/health pickup amounts and drop chances.
 - `timers`: death overlay delay, world rebuild meter duration, and heartbeat interval.
+- `audio`: optional mp3/wav overrides for each sound effect.
+
+Audio files live in `assets/`. Set a sound value to a file name to use that asset, or `null` to keep the built-in synthesized effect:
+
+```js
+audio: {
+  files: {
+    shoot: 'shoot.mp3',
+    empty: null,
+    reloadStart: null
+  }
+}
+```
 
 ## Repository Layout
 
@@ -124,11 +137,13 @@ Other sections in `config.js` expose safe defaults for:
 |-- README.md
 |-- index.html
 |-- config.js
+|-- sound.js
 |-- styles.css
 |-- script.js
 `-- assets/
     |-- favicon.ico
     |-- favicon.png
+    |-- shoot.mp3
     |-- zomvox-gun-spritesheet.png
     `-- zomvox-splash.png
 ```
@@ -137,9 +152,10 @@ Other sections in `config.js` expose safe defaults for:
 
 - `index.html`: document structure, menu, settings, overlays, HUD containers, mobile controls, and script/style references.
 - `config.js`: future-dev friendly tuning values for environment, world, player, weapon, enemies, pickups, timers, seed, and build version.
+- `sound.js`: configurable audio playback with file overrides and synthesized fallback effects.
 - `styles.css`: visual styling, responsive mobile layout, splash screen, health/ammo HUD, death overlay, world rebuild overlay, and touch controls.
-- `script.js`: WebGL setup, procedural terrain, fixed world chunks, movement, combat, enemy behavior, pickups, world rebuilding, HUD updates, audio, and game loop.
-- `assets/`: splash screen, favicon files, and weapon sprite sheet.
+- `script.js`: WebGL setup, procedural terrain, fixed world chunks, movement, combat, enemy behavior, pickups, world rebuilding, HUD updates, and game loop.
+- `assets/`: splash screen, favicon files, weapon sprite sheet, and optional audio files.
 
 ## Hosting
 
