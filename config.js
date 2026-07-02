@@ -152,7 +152,6 @@ window.ZOMVOX_CONFIG = {
       This also controls how many bullet icons show in the HUD.
     */
     magSize: 6,
-
     /*
       Reload duration in seconds.
 
