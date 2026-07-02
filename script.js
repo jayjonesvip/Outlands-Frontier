@@ -120,6 +120,7 @@
   const DEATH_READY_DELAY = Math.max(0.1, configNumber(TIMER_CONFIG, 'deathReadyDelay', 1.85));
   const WORLD_REBUILD_DURATION = Math.max(0.25, configNumber(TIMER_CONFIG, 'worldRebuildDuration', 2.35));
   const HEARTBEAT_INTERVAL = Math.max(0.2, configNumber(TIMER_CONFIG, 'heartbeatInterval', 0.95));
+  const CYCLE_HALF_DAY_MS = Math.max(1000, configNumber(TIMER_CONFIG, 'cycleHalfDayMs', 360000));
 
   for (let i = 0; i < MAG_SIZE; i++) {
     const b = document.createElement('div');
@@ -170,9 +171,10 @@
   let touchMode = matchMedia('(pointer: coarse)').matches;
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, sprint: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.01.1');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.02.1');
   let lastTarget = null;
   let lastFrame = performance.now();
+  const cycleStartedAt = performance.now();
   let fpsAvg = 60;
   let frameCounter = 0;
   let lastKillTime = -999;
@@ -677,14 +679,26 @@
     });
   }
 
-  function spawnPickupAt(x, y, z, kind = 'ammo') {
+  function pickupAirY(x, z) {
+    x = Math.max(WORLD_MIN, Math.min(WORLD_MAX, Math.floor(x)));
+    z = Math.max(WORLD_MIN, Math.min(WORLD_MAX, Math.floor(z)));
+    let y = topSolidY(x, z) + 1;
+    while (y < MAX_Y + 25 && blocksMovement(getBlock(x, y, z))) y++;
+    return y;
+  }
+
+  function spawnPickupAt(x, _y, z, kind = 'ammo') {
+    const px = Math.max(WORLD_MIN, Math.min(WORLD_MAX, Math.floor(x)));
+    const pz = Math.max(WORLD_MIN, Math.min(WORLD_MAX, Math.floor(z)));
+    const py = pickupAirY(px, pz);
+    if (py <= WATER_LEVEL + 1) return;
     pickups.push({
-      x: x + .5,
-      y: y + .35,
-      z: z + .5,
+      x: px + .5,
+      y: py + .35,
+      z: pz + .5,
       kind,
       amount: kind === 'health' ? HEALTH_PICKUP_AMOUNT : AMMO_PICKUP_ROUNDS,
-      bob: seededHash(x * 5.1, z * 9.3) * 10
+      bob: seededHash(px * 5.1, pz * 9.3) * 10
     });
   }
 
@@ -1457,7 +1471,9 @@
 
   function render(time) {
     resize();
-    const cycleAngle = time * 0.035 + 1.15;
+    const cycleLengthMs = CYCLE_HALF_DAY_MS * 2;
+    const cyclePhase = ((performance.now() - cycleStartedAt) % cycleLengthMs) / cycleLengthMs;
+    const cycleAngle = cyclePhase * Math.PI * 2;
     let sunAngle = cycleAngle;
     if (GAME_OPTIONS.timeMode === 'day') sunAngle = Math.PI / 2;
     else if (GAME_OPTIONS.timeMode === 'night') sunAngle = -Math.PI / 2;
