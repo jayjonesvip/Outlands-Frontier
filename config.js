@@ -89,7 +89,7 @@ window.ZOMVOX_CONFIG = {
       Higher values allow taller hills and terrain features.
       Very high values can hurt performance.
     */
-    maxY: 46,
+    maxY: 36,
 
     /*
       Water height level.
@@ -126,7 +126,7 @@ window.ZOMVOX_CONFIG = {
 
       This does not include the bullets already loaded in the magazine.
     */
-    startingReserve: 36,
+    startingReserve: 12,
 
     /*
       Minimum reserve ammo after respawn.
