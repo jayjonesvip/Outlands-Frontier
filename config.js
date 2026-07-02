@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.01.1',
+  buildVersion: '2026.07.02.1',
 
   /*
     Seed used for deterministic world generation.
@@ -258,7 +258,18 @@ window.ZOMVOX_CONFIG = {
       Lower = faster heartbeat.
       Higher = slower heartbeat.
     */
-    heartbeatInterval: 0.95
+    heartbeatInterval: 0.95,
+
+    /*
+      Day/night cycle half length in milliseconds.
+
+      This only applies when environment.timeMode is 'cycle'.
+      The cycle starts at dawn, reaches dusk after this duration,
+      then returns to dawn after this duration again.
+
+      360000 = 6 minutes from dawn to dusk.
+    */
+    cycleHalfDayMs: 360000
   },
 
   audio: {

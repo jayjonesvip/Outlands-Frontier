@@ -74,7 +74,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.07.01.1',
+  buildVersion: '2026.07.02.1',
   initialSeed: 729641,
 
   environment: {
@@ -82,6 +82,10 @@ window.ZOMVOX_CONFIG = {
     skyColor: null,
     dangerousWater: true,
     fog: true
+  },
+
+  timers: {
+    cycleHalfDayMs: 360000
   }
 };
 ```
@@ -91,6 +95,8 @@ window.ZOMVOX_CONFIG = {
 - `'cycle'`: normal day/night cycle.
 - `'day'`: always daytime.
 - `'night'`: always nighttime.
+
+When cycling is enabled, `timers.cycleHalfDayMs` controls the pace in milliseconds. The default `360000` starts at dawn, reaches dusk 6 minutes later, then returns to dawn after another 6 minutes.
 
 `environment.skyColor` controls the sky override:
 
@@ -115,7 +121,7 @@ Other sections in `config.js` expose safe defaults for:
 - `weapon`: magazine size, reload time, and long-range kill distance.
 - `enemies`: base enemy cap and horde escalation values.
 - `pickups`: ammo/health pickup amounts and drop chances.
-- `timers`: death overlay delay, world rebuild meter duration, and heartbeat interval.
+- `timers`: death overlay delay, world rebuild meter duration, heartbeat interval, and day/night cycle length.
 - `audio`: optional mp3/wav overrides for each sound effect.
 
 Audio files live in `assets/`. Set a sound value to a file name to use that asset, or `null` to keep the built-in synthesized effect:
